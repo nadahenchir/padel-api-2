@@ -1,7 +1,6 @@
 // matches.js - Matches page functionality
-if (typeof API_BASE_URL === 'undefined') {
-    const API_BASE_URL = '/api';  // Use relative path
-}
+const API_BASE_URL = window.location.origin;
+
 
 function loadMatchesPage(tournamentId = null) {
     const mainContent = document.getElementById('mainContent');

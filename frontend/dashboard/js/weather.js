@@ -1,8 +1,7 @@
 // weather.js - Weather page functionality
 // Add at the VERY TOP of courts.js, players.js, etc.
-if (typeof API_BASE_URL === 'undefined') {
-    const API_BASE_URL = '/api';  // Use relative path
-}
+const API_BASE_URL = window.location.origin;
+
 function loadWeatherPage() {
     const mainContent = document.getElementById('mainContent');
     

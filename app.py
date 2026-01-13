@@ -23,13 +23,14 @@ from resources.match import blp as MatchBlueprint
 from resources.court import blp as CourtBlueprint
 from resources.weather import blp as WeatherBlueprint
 
+
 def create_app():
     app = Flask(__name__, static_folder='frontend/dashboard')
-    
+
     # ========== ADD CORS SUPPORT ==========
     CORS(app)  # Allow all origins
     # ======================================
-    
+
     # Configuration
     app.config["PROPAGATE_EXCEPTIONS"] = True
     app.config["API_TITLE"] = "Padel Tournament API"
@@ -38,23 +39,23 @@ def create_app():
     app.config["OPENAPI_URL_PREFIX"] = "/"
     app.config["OPENAPI_SWAGGER_UI_PATH"] = "/swagger-ui"
     app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
-    
+
     # Database configuration
     db_path = os.path.join(os.getcwd(), 'padel.db')
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     print(f"📍 Database path: {db_path}")
-    
+
     # Initialize database
     db.init_app(app)
-    
+
     with app.app_context():
         db.create_all()
         print("✅ Database tables ready!")
-    
+
     # Initialize API
     api = Api(app)
-    
+
     # Register blueprints (AUTH FIRST)
     api.register_blueprint(AuthBlueprint)
     api.register_blueprint(PlayerBlueprint)
@@ -63,34 +64,37 @@ def create_app():
     api.register_blueprint(MatchBlueprint)
     api.register_blueprint(CourtBlueprint)
     api.register_blueprint(WeatherBlueprint)
-    
+
     # ========== FRONTEND ROUTES ==========
     @app.route('/')
     def serve_index():
         """Serve the main dashboard"""
         return send_from_directory(app.static_folder, 'index.html')
-    
+
     @app.route('/login')
     def serve_login():
         """Serve the login page"""
         return send_from_directory(app.static_folder, 'login.html')
-    
+
     @app.route('/user-dashboard')
     def serve_user_dashboard():
         """Serve the user dashboard"""
         return send_from_directory(app.static_folder, 'user-dashboard.html')
-    
-    @app.route('/<path:filename>')
-    def serve_frontend_files(filename):
+
+    @app.route('/<path:path>')
+    def serve_static(path):
         """Serve all other frontend files (JS, CSS, etc.)"""
-        return send_from_directory(app.static_folder, filename)
+        if os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+
+        return "File not found", 404
     # =====================================
-    
+
     # Health check
     @app.route("/ping")
     def ping():
         return jsonify({"message": "API is running!"}), 200
-    
+
     # Root endpoint - redirect to UI
     @app.route("/api")
     def api_info():
@@ -149,8 +153,9 @@ def create_app():
                 "openapi": "/openapi.json"
             }
         }), 200
-    
+
     return app
+
 
 app = create_app()
 

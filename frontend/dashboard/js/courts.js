@@ -1,8 +1,5 @@
 // courts.js - Courts page functionality
-if (typeof API_BASE_URL === 'undefined') {
-    const API_BASE_URL = '/api';  // Use relative path
-}
-
+const API_BASE_URL = window.location.origin;
 function loadCourtsPage() {
     const mainContent = document.getElementById('mainContent');
     

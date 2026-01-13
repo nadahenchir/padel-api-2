@@ -1,5 +1,5 @@
 // config.js - Configuration for frontend
-const API_BASE_URL = '/api';  // Use relative path for same domain
+const API_BASE_URL = '';  // Use relative path for same domain
 
 // Authentication helper functions
 function getToken() {
