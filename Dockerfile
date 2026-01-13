@@ -29,5 +29,8 @@ RUN mkdir -p instance
 # Expose port
 EXPOSE 5000
 
+# ADD ONLY THIS ONE LINE:
+ENV FLASK_RUN_HOST=0.0.0.0
+
 # Run the application
 CMD ["python", "app.py"]
