@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - Padel Tournament Manager</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    
+    <!-- Top Navigation Bar -->
+    <nav class="bg-green-600 text-white shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-trophy text-2xl"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold">Padel Tournament</h1>
+                        <p class="text-xs text-green-100">User Dashboard</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <div class="text-sm" id="userEmail">user@padel.com</div>
+                        <div class="text-xs text-green-100">Regular User</div>
+                    </div>
+                    <button onclick="logout()" class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-white shadow-lg">
+            <nav class="mt-8">
+                <a href="#tournaments" onclick="loadPage('tournaments')" class="nav-link flex items-center px-6 py-3 text-gray-700 hover:bg-green-50 hover:text-green-600 transition bg-green-50 text-green-600 border-r-4 border-green-600">
+                    <i class="fas fa-trophy w-6"></i>
+                    <span class="ml-3">Tournaments</span>
+                </a>
+                <a href="#matches" onclick="loadPage('matches')" class="nav-link flex items-center px-6 py-3 text-gray-700 hover:bg-green-50 hover:text-green-600 transition">
+                    <i class="fas fa-table-tennis w-6"></i>
+                    <span class="ml-3">Matches</span>
+                </a>
+                <a href="#players" onclick="loadPage('players')" class="nav-link flex items-center px-6 py-3 text-gray-700 hover:bg-green-50 hover:text-green-600 transition">
+                    <i class="fas fa-users w-6"></i>
+                    <span class="ml-3">Players</span>
+                </a>
+                <a href="#teams" onclick="loadPage('teams')" class="nav-link flex items-center px-6 py-3 text-gray-700 hover:bg-green-50 hover:text-green-600 transition">
+                    <i class="fas fa-user-friends w-6"></i>
+                    <span class="ml-3">Teams</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 p-8">
+            <div id="mainContent">
+                <!-- Content will be loaded here dynamically -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 flex flex-col items-center">
+            <i class="fas fa-spinner fa-spin text-4xl text-green-600 mb-4"></i>
+            <p class="text-gray-700">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity">
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-2"></i>
+            <span id="toastMessage">Success!</span>
+        </div>
+    </div>
+
+    <!-- API Configuration -->
+    <script>
+        // API Base URL
+        const API_BASE_URL = 'http://127.0.0.1:5000';
+        
+        // Get JWT token from localStorage
+        function getToken() {
+            return localStorage.getItem('jwt_token');
+        }
+        
+        // Get user role
+        function getUserRole() {
+            return localStorage.getItem('user_role') || 'user';
+        }
+        
+        // Logout
+        function logout() {
+            localStorage.removeItem('jwt_token');
+            localStorage.removeItem('user_role');
+            localStorage.removeItem('user_email');
+            window.location.href = 'login.html';
+        }
+        
+        // Show loading overlay
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+        }
+        
+        // Hide loading overlay
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+        
+        // Show toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            
+            // Change color based on type
+            toast.className = 'fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50';
+            if (type === 'success') {
+                toast.classList.add('bg-green-500', 'text-white');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-500', 'text-white');
+            } else if (type === 'info') {
+                toast.classList.add('bg-blue-500', 'text-white');
+            }
+            
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+        
+        // Load page content
+        function loadPage(page) {
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('bg-green-50', 'text-green-600', 'border-r-4', 'border-green-600');
+            });
+            
+            // Add active class to current nav link
+            event.target.closest('.nav-link').classList.add('bg-green-50', 'text-green-600', 'border-r-4', 'border-green-600');
+            
+            // Load the appropriate page
+            switch(page) {
+                case 'tournaments':
+                    loadTournamentsPage();
+                    break;
+                case 'matches':
+                    loadMatchesPage();
+                    break;
+                case 'players':
+                    loadPlayersPage();
+                    break;
+                case 'teams':
+                    loadTeamsPage();
+                    break;
+            }
+        }
+        
+        // Check if user is logged in and is regular user
+        function checkAuth() {
+            const token = getToken();
+            const role = getUserRole();
+            
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // If admin, redirect to admin dashboard
+            if (role === 'admin') {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Set user email in navbar
+            const email = localStorage.getItem('user_email');
+            if (email) {
+                document.getElementById('userEmail').textContent = email;
+            }
+        }
+        
+        // Initialize on page load
+        window.onload = function() {
+            checkAuth();
+            loadTournamentsPage(); // Load tournaments by default
+        };
+    </script>
+
+    <!-- Load page-specific JavaScript for user dashboard -->
+    <script src="js/user-tournaments.js"></script>
+    <script src="js/user-matches.js"></script>
+    <script src="js/user-players.js"></script>
+    <script src="js/user-teams.js"></script>
+</body>
+</html>

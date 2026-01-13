@@ -1,6 +1,6 @@
-from flask import Flask, jsonify, send_file
+from flask import Flask, jsonify, send_file, send_from_directory
 from flask_smorest import Api
-from flask_cors import CORS  # NEW: Add this import
+from flask_cors import CORS
 from db import db
 import os
 
@@ -24,12 +24,10 @@ from resources.court import blp as CourtBlueprint
 from resources.weather import blp as WeatherBlueprint
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='frontend/dashboard')
     
     # ========== ADD CORS SUPPORT ==========
-    CORS(app)  # Allow all origins for development
-    # OR for more specific control:
-    # CORS(app, resources={r"/*": {"origins": "*"}})
+    CORS(app)  # Allow all origins
     # ======================================
     
     # Configuration
@@ -66,15 +64,27 @@ def create_app():
     api.register_blueprint(CourtBlueprint)
     api.register_blueprint(WeatherBlueprint)
     
-    # ========== ADD UI SERVING ROUTE ==========
-    @app.route("/ui")
-    def serve_ui():
-        """Serve the HTML UI interface"""
-        try:
-            return send_file("padel_api_ui.html")
-        except FileNotFoundError:
-            return jsonify({"error": "UI file not found. Make sure padel_api_ui.html is in the same directory."}), 404
-    # ==========================================
+    # ========== FRONTEND ROUTES ==========
+    @app.route('/')
+    def serve_index():
+        """Serve the main dashboard"""
+        return send_from_directory(app.static_folder, 'index.html')
+    
+    @app.route('/login')
+    def serve_login():
+        """Serve the login page"""
+        return send_from_directory(app.static_folder, 'login.html')
+    
+    @app.route('/user-dashboard')
+    def serve_user_dashboard():
+        """Serve the user dashboard"""
+        return send_from_directory(app.static_folder, 'user-dashboard.html')
+    
+    @app.route('/<path:filename>')
+    def serve_frontend_files(filename):
+        """Serve all other frontend files (JS, CSS, etc.)"""
+        return send_from_directory(app.static_folder, filename)
+    # =====================================
     
     # Health check
     @app.route("/ping")
@@ -82,13 +92,14 @@ def create_app():
         return jsonify({"message": "API is running!"}), 200
     
     # Root endpoint - redirect to UI
-    @app.route("/")
-    def home():
-        """Redirect to UI or show API info"""
+    @app.route("/api")
+    def api_info():
+        """API information"""
         return jsonify({
             "message": "Padel Tournament API",
             "version": "v1",
-            "ui": "Visit /ui for the web interface",
+            "frontend": "Visit / for the dashboard",
+            "login": "Visit /login to login",
             "endpoints": {
                 "auth": {
                     "register": "POST /auth/register",
