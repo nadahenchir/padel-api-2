@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Flask Backend API
+  backend:
+    build: .
+    container_name: padel-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+      - DATABASE_URL=sqlite:///padel_tournament.db
+      - JWT_SECRET_KEY=your-secret-key-change-this
+      - ADMIN_KEY=admin-secret-key
+      - OPENWEATHER_API_KEY=your-openweather-api-key
+    volumes:
+      - ./instance:/app/instance
+      - .:/app
+    networks:
+      - padel-network
+    restart: unless-stopped
+
+  # Optional: PostgreSQL Database (for production)
+  # Uncomment if you want to use PostgreSQL instead of SQLite
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: padel-db
+  #   environment:
+  #     - POSTGRES_USER=padel_user
+  #     - POSTGRES_PASSWORD=padel_password
+  #     - POSTGRES_DB=padel_tournament
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - padel-network
+  #   restart: unless-stopped
+
+networks:
+  padel-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data:
