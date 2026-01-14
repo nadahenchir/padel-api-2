@@ -1,5 +1,4 @@
 // players.js - Players page functionality
-const API_BASE_URL = window.location.origin;
 
 function loadPlayersPage() {
     const mainContent = document.getElementById('mainContent');
@@ -77,7 +76,7 @@ async function fetchPlayers() {
     showLoading();
     
     try {
-        const response = await fetch('/api/court', {
+        const response = await fetch(`${API_BASE_URL}/player`, {
             headers: {
                 'Authorization': `Bearer ${getToken()}`
             }

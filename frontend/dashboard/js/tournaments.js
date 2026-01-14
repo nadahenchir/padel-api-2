@@ -1,5 +1,4 @@
 // tournaments.js - Tournaments page functionality
-const API_BASE_URL = window.location.origin;
 
 function loadTournamentsPage() {
     const mainContent = document.getElementById('mainContent');
@@ -41,7 +40,7 @@ async function fetchTournaments() {
     showLoading();
     
     try {
-        const response = await fetch('/api/court', {
+        const response = await fetch(`${API_BASE_URL}/tournament`, {
             headers: {
                 'Authorization': `Bearer ${getToken()}`
             }

@@ -1,5 +1,5 @@
 // courts.js - Courts page functionality
-const API_BASE_URL = window.location.origin;
+
 function loadCourtsPage() {
     const mainContent = document.getElementById('mainContent');
     
@@ -61,7 +61,7 @@ async function fetchCourts() {
     showLoading();
     
     try {
-        const response = await fetch('/api/court', {
+        const response = await fetch(`${API_BASE_URL}/court`, {
             headers: {
                 'Authorization': `Bearer ${getToken()}`
             }

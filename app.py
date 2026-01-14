@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, send_file, send_from_directory
+from flask import Flask, jsonify, send_from_directory
 from flask_smorest import Api
 from flask_cors import CORS
 from db import db
@@ -25,11 +25,11 @@ from resources.weather import blp as WeatherBlueprint
 
 
 def create_app():
-    app = Flask(__name__, static_folder='frontend/dashboard')
+    app = Flask(__name__, static_folder="frontend")
 
-    # ========== ADD CORS SUPPORT ==========
-    CORS(app)  # Allow all origins
-    # ======================================
+    # ========== CORS ==========
+    CORS(app)
+    # ==========================
 
     # Configuration
     app.config["PROPAGATE_EXCEPTIONS"] = True
@@ -39,19 +39,43 @@ def create_app():
     app.config["OPENAPI_URL_PREFIX"] = "/"
     app.config["OPENAPI_SWAGGER_UI_PATH"] = "/swagger-ui"
     app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
-
-    # Database configuration
-    db_path = os.path.join(os.getcwd(), 'padel.db')
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    # ========= DATABASE =========
+    os.makedirs(app.instance_path, exist_ok=True)
+    db_path = os.path.join(app.instance_path, "padel.db")
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
     print(f"📍 Database path: {db_path}")
 
-    # Initialize database
     db.init_app(app)
 
-    with app.app_context():
-        db.create_all()
-        print("✅ Database tables ready!")
+    # ✅ Only initialize DB when explicitly requested (safe with multi-worker gunicorn)
+    if os.environ.get("INIT_DB") == "1":
+        lock_path = os.path.join(app.instance_path, ".init_db.lock")
+
+        try:
+            # Atomic lock: only one worker succeeds
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(fd)
+            is_lock_owner = True
+        except FileExistsError:
+            is_lock_owner = False
+
+        if is_lock_owner:
+            try:
+                with app.app_context():
+                    db.create_all()
+                    print("✅ Database tables ready!")
+            finally:
+                # Remove lock so future init runs are possible
+                try:
+                    os.remove(lock_path)
+                except FileNotFoundError:
+                    pass
+        else:
+            print("ℹ️ INIT_DB is already running in another worker. Skipping create_all().")
+
+    # ============================
 
     # Initialize API
     api = Api(app)
@@ -66,28 +90,48 @@ def create_app():
     api.register_blueprint(WeatherBlueprint)
 
     # ========== FRONTEND ROUTES ==========
-    @app.route('/')
-    def serve_index():
-        """Serve the main dashboard"""
-        return send_from_directory(app.static_folder, 'index.html')
 
-    @app.route('/login')
+    @app.route("/")
+    def root():
+        return send_from_directory(app.static_folder, "login.html")
+
+    @app.route("/login")
     def serve_login():
-        """Serve the login page"""
-        return send_from_directory(app.static_folder, 'login.html')
+        return send_from_directory(app.static_folder, "login.html")
 
-    @app.route('/user-dashboard')
+    @app.route("/dashboard")
+    def serve_dashboard():
+        return send_from_directory(app.static_folder, "index.html")
+
+    @app.route("/user-dashboard")
     def serve_user_dashboard():
-        """Serve the user dashboard"""
-        return send_from_directory(app.static_folder, 'user-dashboard.html')
+        return send_from_directory(app.static_folder, "user-dashboard.html")
 
-    @app.route('/<path:path>')
-    def serve_static(path):
-        """Serve all other frontend files (JS, CSS, etc.)"""
-        if os.path.exists(os.path.join(app.static_folder, path)):
+    @app.route("/<path:path>")
+    def serve_frontend(path):
+        """
+        Serve static assets correctly:
+        - If file exists under frontend/, return it.
+        - If it's an asset request but missing, return 404 (NOT HTML).
+        - Otherwise treat as frontend route and serve login.html.
+        """
+        full_path = os.path.join(app.static_folder, path)
+
+        # Serve existing static files
+        if os.path.isfile(full_path):
             return send_from_directory(app.static_folder, path)
 
-        return "File not found", 404
+        # Asset requests should NOT fall back to HTML
+        asset_exts = (
+            ".js", ".css", ".png", ".jpg", ".jpeg",
+            ".svg", ".ico", ".map", ".json", ".txt"
+        )
+        if path.lower().endswith(asset_exts):
+            return "Not found", 404
+
+        # Fallback for frontend routes
+        return send_from_directory(app.static_folder, "login.html")
+
     # =====================================
 
     # Health check
@@ -95,63 +139,13 @@ def create_app():
     def ping():
         return jsonify({"message": "API is running!"}), 200
 
-    # Root endpoint - redirect to UI
+    # Simple API info
     @app.route("/api")
     def api_info():
-        """API information"""
         return jsonify({
             "message": "Padel Tournament API",
             "version": "v1",
-            "frontend": "Visit / for the dashboard",
-            "login": "Visit /login to login",
-            "endpoints": {
-                "auth": {
-                    "register": "POST /auth/register",
-                    "login": "POST /auth/login",
-                    "register_admin": "POST /auth/register-admin"
-                },
-                "players": {
-                    "get_all": "GET /player",
-                    "create": "POST /player",
-                    "get_one": "GET /player/{id}",
-                    "update": "PUT /player/{id}",
-                    "delete": "DELETE /player/{id}"
-                },
-                "teams": {
-                    "get_all": "GET /team",
-                    "get_one": "GET /team/{id}",
-                    "create": "POST /team",
-                    "add_member": "POST /team/{id}/add-member",
-                    "delete": "DELETE /team/{id}"
-                },
-                "tournaments": {
-                    "get_all": "GET /tournament",
-                    "get_one": "GET /tournament/{id}",
-                    "register_team": "POST /tournament/{id}/register-team",
-                    "start_group": "POST /tournament/{id}/start-group-phase",
-                    "standings": "GET /tournament/{id}/standings",
-                    "start_knockout": "POST /tournament/{id}/start-knockout-phase",
-                    "schedule_matches": "POST /tournament/{id}/schedule-matches"
-                },
-                "matches": {
-                    "get_all": "GET /match",
-                    "get_one": "GET /match/{id}",
-                    "tournament_matches": "GET /tournament/{id}/matches",
-                    "record_result": "POST /match/{id}/record-result",
-                    "team_matches": "GET /team/{id}/matches",
-                    "validate_schedule": "POST /match/{id}/validate-schedule"
-                },
-                "courts": {
-                    "get_all": "GET /court",
-                    "create": "POST /court"
-                },
-                "weather": {
-                    "check_all": "POST /tournament/{id}/check-all-weather",
-                    "check_match": "POST /match/{id}/check-weather"
-                },
-                "swagger": "/swagger-ui",
-                "openapi": "/openapi.json"
-            }
+            "frontend": "/ (login), /dashboard (admin), /user-dashboard (user)"
         }), 200
 
     return app
@@ -160,4 +154,4 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000)

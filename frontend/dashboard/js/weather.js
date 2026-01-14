@@ -1,6 +1,4 @@
 // weather.js - Weather page functionality
-// Add at the VERY TOP of courts.js, players.js, etc.
-const API_BASE_URL = window.location.origin;
 
 function loadWeatherPage() {
     const mainContent = document.getElementById('mainContent');
@@ -107,7 +105,7 @@ function loadWeatherPage() {
 // Load tournaments
 async function loadTournamentsForWeather() {
     try {
-        const response = await fetch('/api/court', {
+        const response = await fetch(`${API_BASE_URL}/tournament`, {
             headers: {
                 'Authorization': `Bearer ${getToken()}`
             }

@@ -1,6 +1,4 @@
 // matches.js - Matches page functionality
-const API_BASE_URL = window.location.origin;
-
 
 function loadMatchesPage(tournamentId = null) {
     const mainContent = document.getElementById('mainContent');
@@ -86,7 +84,7 @@ async function fetchMatches() {
             url = `${API_BASE_URL}/tournament/${window.currentTournamentFilter}/matches`;
         }
         
-        const response = await fetch('/api/court', {
+        const response = await fetch(url, {
             headers: {
                 'Authorization': `Bearer ${getToken()}`
             }

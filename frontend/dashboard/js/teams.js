@@ -1,5 +1,4 @@
 // teams.js - Teams page functionality
-const API_BASE_URL = window.location.origin;
 
 function loadTeamsPage() {
     const mainContent = document.getElementById('mainContent');
@@ -45,7 +44,7 @@ async function fetchTeams() {
     showLoading();
     
     try {
-        const response = await fetch('/api/court', {
+        const response = await fetch(`${API_BASE_URL}/team`, {
             headers: {
                 'Authorization': `Bearer ${getToken()}`
             }
